@@ -11,16 +11,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var handler http.Handler
+
+func createTestRequest(method, url string) (*http.Request, error) {
+	req := httptest.NewRequest(method, url, nil)
+	return req, nil
+}
+
+func TestMain(m *testing.M) {
+	handler = http.HandlerFunc(MainHandle)
+}
+
 func TestMainHandlerWhenOk(t *testing.T) {
-	req := httptest.NewRequest("GET", "/cafe?count=4&city=moscow", nil) // здесь нужно создать запрос к сервису
+	req, err := createTestRequest("GET", "/cafe?count=4&city=moscow") // здесь нужно создать запрос к сервису
+	//проверка корректности запроса
+	require.NoError(t, err, "Erorr creating request")
 
 	responseRecorder := httptest.NewRecorder()
-	handler := http.HandlerFunc(MainHandle)
 	handler.ServeHTTP(responseRecorder, req)
 	// получаем ответ
 	response := responseRecorder.Result()
-	//проверка корректности запроса
-	require.NotNil(t, req, "Erorr creating request")
 	//проверка возврата код ответа - 200
 	require.Equal(t, 200, response.StatusCode, "Unexpected status code")
 	//тело ответа не пустое
@@ -28,10 +38,10 @@ func TestMainHandlerWhenOk(t *testing.T) {
 }
 
 func TestMainHandlerWhereIsTheWrongCity(t *testing.T) {
-	req := httptest.NewRequest("GET", "/cafe?count=4&city=Ryazan", nil) // здесь нужно создать запрос к сервису
+	req, err := createTestRequest("GET", "/cafe?count=4&city=UnExistsCity") // здесь нужно создать запрос к сервису
+	require.NoError(t, err, "Error creating request")
 
 	responseRecorder := httptest.NewRecorder()
-	handler := http.HandlerFunc(MainHandle)
 	handler.ServeHTTP(responseRecorder, req)
 	// получаем ответ
 	response := responseRecorder.Result()
@@ -45,10 +55,10 @@ func TestMainHandlerWhereIsTheWrongCity(t *testing.T) {
 
 func TestMainHandlerWhenCountMoreThanTotal(t *testing.T) {
 	totalCount := 4
-	req := httptest.NewRequest("GET", "/cafe?count=5&city=moscow", nil) // здесь нужно создать запрос к сервису
+	req, err := createTestRequest("GET", "/cafe?count=5&city=moscow") // здесь нужно создать запрос к сервису
+	require.NoError(t, err, "Error creating request")
 
 	responseRecorder := httptest.NewRecorder()
-	handler := http.HandlerFunc(MainHandle)
 	handler.ServeHTTP(responseRecorder, req)
 	// получаем ответ
 	response := responseRecorder.Result()
@@ -57,4 +67,6 @@ func TestMainHandlerWhenCountMoreThanTotal(t *testing.T) {
 	list := strings.Split(string(body), ",")
 	//проверяем что длина списка кафе соответсыует ожидаемому общему количеству
 	assert.Len(t, list, totalCount, "Unexpected number of cafes")
+	//проверка возврата код ответа - 200
+	require.Equal(t, 200, response.StatusCode, "Unexpected status code")
 }
